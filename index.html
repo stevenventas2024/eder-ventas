@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Eder Steven Ventas - Gestión v15 Cloud</title>
+    <style>
+        :root { --bg: #0b101a; --card: #1a2233; --accent: #38bdf8; --text: #f1f5f9; --green: #22c55e; --red: #ef4444; --orange: #f59e0b; --yellow: #facc15; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        
+        nav { width: 260px; background: var(--card); padding: 20px; border-right: 1px solid #2d3748; display: flex; flex-direction: column; }
+        .nav-btn { width: 100%; padding: 12px; margin-bottom: 8px; background: transparent; border: 1px solid #2d3748; color: var(--text); text-align: left; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+        .nav-btn.active { background: var(--accent); color: var(--bg); font-weight: bold; }
+
+        /* Estilo del botón sync */
+        .btn-sync { background: var(--orange); color: white; margin-bottom: 15px; padding: 12px; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; }
+
+        main { flex: 1; padding: 30px; overflow-y: auto; }
+        .section { display: none; }
+        .section.active { display: block; }
+
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; background: var(--card); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #334155; }
+        .group { display: flex; flex-direction: column; }
+        label { font-size: 10px; color: var(--accent); font-weight: bold; margin-bottom: 4px; text-transform: uppercase; }
+        input { background: #0b0f1a; border: 1px solid #2d3748; color: white; padding: 10px; border-radius: 6px; font-size: 13px; }
+        
+        table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 12px; font-size: 12px; }
+        th { background: #0f172a; padding: 12px; color: #94a3b8; text-align: left; }
+        td { padding: 12px; border-bottom: 1px solid #2d3748; vertical-align: middle; }
+
+        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; transition: 0.2s; }
+        .btn-wa { background: #25d366; color: white; text-decoration: none; display: inline-block; margin-top: 5px; }
+        .btn-edit { background: var(--accent); color: #0b101a; }
+        .btn-res { background: var(--orange); color: white; }
+        .btn-del { background: var(--red); color: white; }
+        .btn-sell { background: var(--green); color: white; width: 100%; padding: 12px; }
+        .btn-view { background: #6366f1; color: white; }
+
+        .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; }
+        .gar-act { background: rgba(34, 197, 94, 0.2); color: var(--green); }
+        .gar-warn { background: rgba(250, 204, 21, 0.2); color: var(--yellow); }
+        .gar-exp { background: rgba(239, 68, 68, 0.2); color: var(--red); }
+
+        .secure-data { font-family: 'Courier New', monospace; color: #94a3b8; display: block; margin-bottom: 5px; white-space: pre-wrap; }
+        .eye-btn { background: none; border: 1px solid #334155; color: var(--accent); cursor: pointer; border-radius: 4px; padding: 2px 6px; }
+
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--card); padding: 25px; border-radius: 15px; border: 2px solid var(--accent); z-index: 1000; min-width: 500px; max-height: 90vh; overflow-y: auto; }
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; }
+        .info-row { background: #0f172a; padding: 10px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid var(--accent); }
+    </style>
+</head>
+<body>
+
+<nav>
+    <h2 style="color: var(--accent); text-align: center;">Eder Steven Ventas</h2>
+    <button class="btn-sync" onclick="pullFromCloud()">🔄 ACTUALIZAR NUBE</button>
+    <button class="nav-btn active" onclick="showSec('sec-reg')">REGISTRAR STOCK</button>
+    <button class="nav-btn" onclick="showSec('sec-disp')">DISPONIBLES</button>
+    <button class="nav-btn" onclick="showSec('sec-vend')">VENDIDAS</button>
+</nav>
+
+<div class="overlay" id="overlay" onclick="closeAll()"></div>
+
+<div id="modalSell" class="modal">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
+        <h3 id="mTitle">Vender Cuenta</h3>
+        <button onclick="closeAll()" style="background:none; border:none; color:var(--red); font-size:24px; cursor:pointer">×</button>
+    </div>
+    <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+        <div class="group"><label>Cliente</label><input type="text" id="vCli"></div>
+        <div class="group"><label>WhatsApp</label><input type="text" id="vWA"></div>
+        <div class="group"><label>Precio Venta</label><input type="number" id="vPrice"></div>
+        <div class="group"><label>Garantía (Días)</label><input type="number" id="vDays" value="30"></div>
+        <div class="group" style="grid-column: 1/-1;"><label>Nota / Estado de Entrega</label><input type="text" id="vNote"></div>
+    </div>
+    <button class="btn btn-sell" onclick="confirmAction()">CONFIRMAR</button>
+</div>
+
+<div id="modalView" class="modal">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
+        <h3>Datos de la Cuenta</h3>
+        <button onclick="closeAll()" style="background:none; border:none; color:var(--red); font-size:24px; cursor:pointer">×</button>
+    </div>
+    <div id="viewContent"></div>
+</div>
+
+<main>
+    <div id="sec-reg" class="section active">
+        <h3 id="regTitle">Registro de Stock</h3>
+        <div class="form-grid" id="fIn">
+            <div class="group"><label>Plataforma</label><input type="text" id="plat"></div>
+            <div class="group"><label>Correo Juego</label><input type="text" id="cJ"></div>
+            <div class="group"><label>Contraseña Juego</label><input type="text" id="pJ"></div>
+            <div class="group"><label>Correo Vinc.</label><input type="text" id="cV"></div>
+            <div class="group"><label>Contraseña Vinc.</label><input type="text" id="pV"></div>
+            <div class="group"><label>Correo Desv.</label><input type="text" id="cD"></div>
+            <div class="group"><label>Contraseña Desv.</label><input type="text" id="pD"></div>
+            <div class="group"><label>Costo S/</label><input type="number" id="pBuy"></div>
+            <div class="group"><label>Proveedor</label><input type="text" id="prN"></div>
+            <div class="group"><label>WhatsApp Prov</label><input type="text" id="prW"></div>
+            <div class="group"><label>Yape Prov</label><input type="text" id="prY"></div>
+            <div class="group"><label>Link Edit Foto/Captura</label><input type="text" id="link"></div>
+            <div class="group" style="grid-column: 1/-1;"><label>Estado de la Cuenta (En Stock)</label><input type="text" id="stStatus"></div>
+            <button class="btn btn-sell" id="mainBtn" onclick="saveToStock()" style="grid-column: 1/-1;">GUARDAR EN STOCK</button>
+        </div>
+    </div>
+
+    <div id="sec-disp" class="section">
+        <h3>Stock Disponible</h3>
+        <table id="tDisp">
+            <thead><tr><th>Servicio</th><th>Accesos</th><th>Estado</th><th>Costo</th><th>Acciones</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div id="sec-vend" class="section">
+        <h3>Historial EderTech</h3>
+        <table id="tVend">
+            <thead><tr><th>Cliente</th><th>Servicio</th><th>Venta</th><th>Ganancia</th><th>Garantía</th><th>Acciones</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</main>
+
+<script>
+    // URL DE TU GOOGLE APPS SCRIPT
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzs1BIXyQDR1Zy2B2PTWp0hjOryAJhOaiUcqQUPCsyg7ZD66M6cfxjiFM771oVCaDVy/exec/exec';
+
+    let db = JSON.parse(localStorage.getItem('edertech_v15')) || { stock: [], sales: [] };
+    let tempId = null;
+    let mode = 'sell';
+
+    // FUNCIÓN PARA ENVIAR A LA NUBE
+    async function syncToCloud(data) {
+        try {
+            await fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) });
+        } catch (e) { console.error("Error nube", e); }
+    }
+
+    // FUNCIÓN PARA TRAER DESDE LA NUBE
+    async function pullFromCloud() {
+        const btn = document.querySelector('.btn-sync');
+        btn.innerText = "⏳ Cargando...";
+        try {
+            const res = await fetch(WEB_APP_URL);
+            const data = await res.json();
+            db.stock = data.stock.map((r, i) => ({
+                id: Date.now() + i, plat: r, cJ: r, pJ: r, cV: r, pV: r, cD: r, pD: r, pBuy: r, prN: r, prW: r, prY: r, link: r, stStatus: r
+            }));
+            db.sales = data.sales.map((r, i) => ({
+                id: Date.now() + i + 500, vCli: r, vWA: r, plat: r, vPrice: r, vGain: r, vNote: r, end: new Date().toISOString(), cJ: r, pJ: r, cV: r, pV: r, cD: r, pD: r, prN: r, prW: r, prY: r, link: r
+            }));
+            update(); render();
+            btn.innerText = "✅ Sincronizado";
+        } catch (e) { btn.innerText = "❌ Error Sync"; }
+        setTimeout(() => btn.innerText = "🔄 ACTUALIZAR NUBE", 2000);
+    }
+
+    function showSec(id) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        render();
+    }
+
+    function saveToStock() {
+        const item = {
+            type: "stock", // Identificador para el Excel
+            id: tempId || Date.now(),
+            plat: document.getElementById('plat').value,
+            cJ: document.getElementById('cJ').value, pJ: document.getElementById('pJ').value,
+            cV: document.getElementById('cV').value, pV: document.getElementById('pV').value,
+            cD: document.getElementById('cD').value, pD: document.getElementById('pD').value,
+            pBuy: document.getElementById('pBuy').value,
+            prN: document.getElementById('prN').value, prW: document.getElementById('prW').value, prY: document.getElementById('prY').value,
+            link: document.getElementById('link').value, stStatus: document.getElementById('stStatus').value
+        };
+        if(tempId) { db.stock = db.stock.map(i => i.id === tempId ? item : i); tempId = null; }
+        else { db.stock.push(item); }
+        update(); render(); syncToCloud(item);
+        document.querySelectorAll('#fIn input').forEach(i => i.value = "");
+        document.getElementById('mainBtn').innerText = "GUARDAR EN STOCK";
+    }
+
+    function render() {
+        const bDisp = document.querySelector('#tDisp tbody');
+        bDisp.innerHTML = "";
+        db.stock.forEach(s => {
+            const fullAcc = `JUEGO: ${s.cJ || ''} / ${s.pJ || ''}\nVINC: ${s.cV || 'N/A'} / ${s.pV || 'N/A'}\nDESV: ${s.cD || 'N/A'} / ${s.pD || 'N/A'}`;
+            bDisp.innerHTML += `<tr>
+                <td><b>${s.plat}</b></td>
+                <td><span class="secure-data" data-all="${fullAcc}">**********</span><button class="eye-btn" onclick="toggleEye(this)">👁️</button></td>
+                <td style="color:var(--yellow)">${s.stStatus || 'Ok'}</td>
+                <td>S/ ${s.pBuy}</td>
+                <td>
+                    <button class="btn btn-sell" style="width:auto" onclick="openSell(${s.id})">VENDER</button>
+                    <button class="btn btn-edit" onclick="editStock(${s.id})">✎</button>
+                    <button class="btn btn-del" onclick="remove(${s.id}, 'stock')">X</button>
+                </td>
+            </tr>`;
+        });
+
+        const bVend = document.querySelector('#tVend tbody');
+        bVend.innerHTML = "";
+        db.sales.forEach(v => {
+            const now = new Date().getTime();
+            const end = new Date(v.end).getTime();
+            const hrsRem = (end - now) / 3600000;
+
+            let badge = '';
+            if (hrsRem <= 0) badge = '<span class="badge gar-exp">VENCIDA</span>';
+            else if (hrsRem <= 48) badge = '<span class="badge gar-warn">POR VENCER</span>';
+            else badge = '<span class="badge gar-act">ACTIVA</span>';
+
+            bVend.innerHTML += `<tr>
+                <td><b>${v.vCli}</b><br><a href="https://wa.me/${v.vWA}" target="_blank" class="btn btn-wa" style="padding:2px 5px; font-size:9px">WhatsApp</a></td>
+                <td>${v.plat}</td>
+                <td style="color:var(--accent)">S/ ${v.vPrice}</td>
+                <td style="color:var(--green)">S/ ${v.vGain}</td>
+                <td>${badge}</td>
+                <td>
+                    <button class="btn btn-view" onclick="viewFull(${v.id})">DATOS</button>
+                    <button class="btn btn-edit" onclick="editSale(${v.id})">✎</button>
+                    <button class="btn btn-res" onclick="restore(${v.id})">↺</button>
+                </td>
+            </tr>`;
+        });
+    }
+
+    function toggleEye(btn) {
+        const span = btn.previousElementSibling;
+        if(span.innerText.includes("*")) { span.innerText = span.getAttribute('data-all'); btn.innerText = "🔒"; }
+        else { span.innerText = "**********"; btn.innerText = "👁️"; }
+    }
+
+    function editStock(id) {
+        const s = db.stock.find(i => i.id === id);
+        tempId = id;
+        document.getElementById('plat').value = s.plat;
+        document.getElementById('cJ').value = s.cJ; document.getElementById('pJ').value = s.pJ;
+        document.getElementById('cV').value = s.cV; document.getElementById('pV').value = s.pV;
+        document.getElementById('cD').value = s.cD; document.getElementById('pD').value = s.pD;
+        document.getElementById('pBuy').value = s.pBuy;
+        document.getElementById('prN').value = s.prN; document.getElementById('prW').value = s.prW; document.getElementById('prY').value = s.prY;
+        document.getElementById('link').value = s.link; document.getElementById('stStatus').value = s.stStatus;
+        document.getElementById('mainBtn').innerText = "ACTUALIZAR CAMBIOS";
+        showSec('sec-reg');
+    }
+
+    function viewFull(id) {
+        const v = db.sales.find(i => i.id === id);
+        document.getElementById('viewContent').innerHTML = `
+            <div class="info-row"><b>CLIENTE:</b> ${v.vCli} | WA: ${v.vWA}</div>
+            <div class="info-row"><b>ACCESOS JUEGO:</b><br>${v.cJ} / ${v.pJ}</div>
+            <div class="info-row"><b>ACCESOS VINCULADO:</b><br>${v.cV || 'N/A'} / ${v.pV || 'N/A'}</div>
+            <div class="info-row"><b>ACCESOS DESVINCULADO:</b><br>${v.cD || 'N/A'} / ${v.pD || 'N/A'}</div>
+            <div class="info-row"><b>PROVEEDOR:</b> ${v.prN}<br>WA: ${v.prW} | Yape: ${v.prY}</div>
+            <div class="info-row"><b>NOTAS:</b> Stock: ${v.stStatus || 'N/A'} | Venta: ${v.vNote || 'N/A'}</div>
+            <div class="info-row"><b>EVIDENCIA:</b> <a href="${v.link}" target="_blank" style="color:var(--accent)">Ver Foto</a></div>
+        `;
+        document.getElementById('overlay').style.display = 'block';
+        document.getElementById('modalView').style.display = 'block';
+    }
+
+    function openSell(id) { tempId = id; mode = 'sell'; document.getElementById('mTitle').innerText = "Vender Cuenta"; document.getElementById('overlay').style.display = 'block'; document.getElementById('modalSell').style.display = 'block'; }
+    
+    function editSale(id) {
+        const v = db.sales.find(i => i.id === id);
+        tempId = id; mode = 'editSale';
+        document.getElementById('vCli').value = v.vCli;
+        document.getElementById('vWA').value = v.vWA;
+        document.getElementById('vPrice').value = v.vPrice;
+        document.getElementById('vNote').value = v.vNote;
+        document.getElementById('mTitle').innerText = "Editar Datos de Venta";
+        document.getElementById('overlay').style.display = 'block';
+        document.getElementById('modalSell').style.display = 'block';
+    }
+
+    function confirmAction() {
+        if(mode === 'sell') {
+            const s = db.stock.find(i => i.id === tempId);
+            const pV = document.getElementById('vPrice').value;
+            const days = document.getElementById('vDays').value;
+            const sale = { 
+                ...s, type: "sale",
+                vCli: document.getElementById('vCli').value, vWA: document.getElementById('vWA').value, 
+                vPrice: pV, vGain: (pV - s.pBuy).toFixed(2), vNote: document.getElementById('vNote').value, 
+                end: new Date(Date.now() + (days * 86400000)).toISOString() 
+            };
+            db.sales.push(sale);
+            db.stock = db.stock.filter(i => i.id !== tempId);
+            syncToCloud(sale);
+        } else {
+            db.sales = db.sales.map(v => v.id === tempId ? { ...v, vCli: document.getElementById('vCli').value, vWA: document.getElementById('vWA').value, vPrice: document.getElementById('vPrice').value, vGain: (document.getElementById('vPrice').value - v.pBuy).toFixed(2), vNote: document.getElementById('vNote').value } : v);
+        }
+        update(); closeAll(); showSec('sec-vend');
+    }
+
+    function closeAll() { document.querySelectorAll('.modal').forEach(m => m.style.display='none'); document.getElementById('overlay').style.display='none'; }
+    function restore(id) {
+        const v = db.sales.find(i => i.id === id);
+        const { vCli, vWA, vPrice, vGain, vNote, end, type, ...orig } = v;
+        db.stock.push(orig); db.sales = db.sales.filter(i => i.id !== id);
+        update(); render();
+    }
+    function remove(id, t) { if(confirm("¿Eliminar?")) { db[t] = db[t].filter(i => i.id !== id); update(); render(); } }
+    function update() { localStorage.setItem('edertech_v15', JSON.stringify(db)); }
+    window.onload = pullFromCloud;
+</script>
+</body>
+</html>
